@@ -1,33 +1,74 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const users = require('../controllers/usersController');
-const validate = require('../middleware/validate');
-const Joi = require('joi');
-const auth = require('../middleware/authMiddleware');
+const User = require("../models/User");
 
-// validation
-const userSchema = Joi.object({
-  username: Joi.string().required(),
-  email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
-  role: Joi.string().valid('customer','admin').optional(),
-  phone: Joi.string().optional(),
-  address: Joi.string().optional()
+/**
+ * @swagger
+ * tags:
+ *   name: Users
+ *   description: User management endpoints
+ */
+
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Get all users
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: List of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ *       500:
+ *         description: Server error
+ */
+router.get("/", async (req, res, next) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (err) {
+    next(err);
+  }
 });
 
-const userUpdateSchema = Joi.object({
-  username: Joi.string().optional(),
-  email: Joi.string().email().optional(),
-  password: Joi.string().min(6).optional(),
-  role: Joi.string().valid('customer','admin').optional(),
-  phone: Joi.string().optional(),
-  address: Joi.string().optional()
+/**
+ * @swagger
+ * /users/{id}:
+ *   get:
+ *     summary: Get a user by ID
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.get("/:id", async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
 });
-
-router.get('/', auth, users.getAll);         // admin-only in production; for W05 it's protected
-router.post('/', auth, validate(userSchema), users.create);
-router.get('/:id', auth, users.getById);
-router.put('/:id', auth, validate(userUpdateSchema), users.update);
-router.delete('/:id', auth, users.remove);
 
 module.exports = router;

@@ -1,24 +1,102 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
-// Register route
+/**
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: Authentication endpoints
+ */
+
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - email
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: rafiki
+ *               email:
+ *                 type: string
+ *                 example: fred@gmail.com
+ *               password:
+ *                 type: string
+ *                 example: fred123
+ *               role:
+ *                 type: string
+ *                 enum: [customer, admin]
+ *                 example: customer
+ *               phone:
+ *                 type: string
+ *                 example: 0781397966
+ *               address:
+ *                 type: string
+ *                 example: kigali
+ *     responses:
+ *       201:
+ *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation or duplicate error
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     User:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *         username:
+ *           type: string
+ *         email:
+ *           type: string
+ *         role:
+ *           type: string
+ *         phone:
+ *           type: string
+ *         address:
+ *           type: string
+ */
+
 router.post("/register", async (req, res, next) => {
   try {
     const { username, email, password, role, phone, address } = req.body;
 
-    // Check required fields
     if (!username || !email || !password) {
       return res.status(400).json({ error: "Username, email, and password are required" });
     }
 
-    // Check for duplicate email
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: "Email already exists" });
     }
 
-    // Create user
     const newUser = await User.create({ username, email, password, role, phone, address });
 
     res.status(201).json({ message: "User created", user: newUser });
@@ -27,8 +105,45 @@ router.post("/register", async (req, res, next) => {
   }
 });
 
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Login a user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: fred@gmail.com
+ *               password:
+ *                 type: string
+ *                 example: fred123
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 token:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Invalid credentials
+ */
 
 router.post("/login", async (req, res, next) => {
   try {
@@ -38,19 +153,16 @@ router.post("/login", async (req, res, next) => {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
-    // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ error: "Invalid credentials" });
     }
 
-    // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ error: "Invalid credentials" });
     }
 
-    // Generate JWT token (optional, can be used for authentication later)
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET || "secretkey",
@@ -74,6 +186,4 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
-
 module.exports = router;
-
