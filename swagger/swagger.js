@@ -21,6 +21,18 @@ module.exports = (app) => {
           description: "Deployed server on Render",
         },
       ],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: "http",
+            scheme: "bearer",
+            bearerFormat: "JWT",
+          },
+        },
+      },
+      security: [
+        { bearerAuth: [] } // apply globally so Authorize button appears
+      ],
     },
     apis: ["./routes/*.js"], // Path to route files with Swagger comments
   };
